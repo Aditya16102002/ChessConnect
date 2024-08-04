@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .chess-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #000; /* Black background color */
+      padding: 20px; /* Add padding for small screens */
+      box-sizing: border-box; /* Ensure padding does not affect overall size */
+    }
+
+    .chessboard {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      grid-template-rows: repeat(8, minmax(0, 1fr));
+      width: 600px;
+      height: 600px;
+      position: relative; /* Needed for move indicators */
+    }
+
+    .piece.white {
+      color: white;
+      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 1));
+    }
+
+    .piece.black {
+      color: black;
+    }
+
+    .flipped {
+      transform: rotate(180deg);
+    }
+
+    .square {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative; /* Needed for highlighting legal moves */
+    }
+
+    .square.light {
+      background-color: #f0d9b5;
+    }
+
+    .square.dark {
+      background-color: #b58863;
+    }
+
+    .piece {
+      font-size: 72px; /* Adjust this value to make the pieces larger */
+      cursor: pointer;
+      transition: filter 0.3s, transform 0.2s; /* Smooth transition for piece */
+    }
+
+    /* Hover effect for chess pieces */
+    .piece:hover {
+      filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.8)); /* Enhanced shadow effect */
+      transform: scale(1.1); /* Slightly enlarge the piece */
+    }
+
+    /* Rotate pieces for black player */
+    .flipped .piece {
+      transform: rotate(180deg);
+    }
+
+    /* Apply hover effect on black pieces to counteract the rotation */
+    .flipped .piece:hover {
+      transform: rotate(180deg) scale(1.1); /* Counteract rotation and enlarge */
+    }
+
+    /* Highlight for legal moves */
+    .highlight {
+      background-color: rgba(0, 255, 0, 0.3); /* Semi-transparent green */
+    }
+
+    /* Move indicator for legal moves */
+    .move-indicator {
+      width: 10px;
+      height: 10px;
+      background-color: rgba(0, 255, 0, 0.6); /* Change to green for better visibility */
+      border-radius: 50%;
+      position: absolute;
+      transform: translate(-50%, -50%);
+    }
+
+    #chat-container {
+      margin-left: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      max-width: calc(100% - 20px); /* Prevent overflow on small screens */
+    }
+
+    #chat-box {
+      height: 200px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+      margin-bottom: 10px;
+      width: 300px;
+    }
+
+    #chat-form {
+      display: flex;
+      width: 100%;
+    }
+
+    #chat-form input {
+      flex: 1;
+    }
+
+    #clear-chat {
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    /* Hover effect for send button */
+    #chat-form button:hover {
+      background-color: #0056b3; /* Darker blue for hover effect */
+      transform: scale(1.1); /* Slightly enlarge the button */
+      transition: background-color 0.3s, transform 0.2s; /* Smooth transition */
+    }
+
+    /* Hover effect for clear chat history button */
+    #clear-chat:hover {
+      background-color: #c62828; /* Darker red for hover effect */
+      transform: scale(1.1); /* Slightly enlarge the button */
+      transition: background-color 0.3s, transform 0.2s; /* Smooth transition */
+    }
+
+    /* Media Queries for smaller screens */
+    @media (max-width: 768px) {
+      .chess-container {
+        flex-direction: column; /* Stack chessboard and chat on smaller screens */
+        align-items: stretch;
+        padding: 10px; /* Reduced padding */
+      }
+
+      .chessboard {
+        width: 100%;
+        height: auto; /* Maintain aspect ratio */
+        max-width: 100%; /* Allow resizing */
+        max-height: 60vw; /* Ensure height is proportional to viewport width */
+      }
+
+      #chat-container {
+        margin-left: 0;
+        width: 100%;
+        max-width: 100%; /* Ensure it fits within viewport */
+        margin-top: 80px; /* Increased gap between chat and chessboard */
+      }
+
+      #chat-box {
+        width: 100%; /* Fit chat box to container width */
+      }
+
+      #chat-form {
+        flex-direction: column; /* Stack input and button vertically */
+      }
+
+      #chat-form input {
+        margin-bottom: 10px; /* Space between input and button */
+      }
+
+      #chat-form button {
+        width: 100%; /* Full width button */
+      }
+    }
+
+    @media (max-width: 480px) {
+      .piece {
+        font-size: 10vw; /* Increase size for better visibility on very small screens */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="chess-container">
+    <div class="chessboard bg-red-800"></div>
+    <!-- Chessboard container -->
+    <div id="chat-container">
+      <div id="chat-box" class="p-2"></div>
+      <!-- Chat box for messages -->
+      <form id="chat-form">
+        <input
+          type="text"
+          id="chat-input"
+          placeholder="Type a message..."
+          autocomplete="off"
+        />
+        <button type="submit" class="ml-2 p-2 bg-blue-500 text-white">
+          Send
+        </button>
+        <!-- Send button -->
+      </form>
+      <button id="clear-chat" class="mt-2 p-2 bg-red-500 text-white">
+        Clear Chat History
+      </button>
+      <!-- Clear chat button -->
+    </div>
+  </div>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="/js/chessgame.js"></script>
+  <!-- Link to your JavaScript file -->
+</body>
+</html>
